@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import User from '../models/User';
 
 export interface AuthRequest extends Request {
   user?: {
@@ -8,7 +9,7 @@ export interface AuthRequest extends Request {
   };
 }
 
-export const protect = (req: AuthRequest, res: Response, next: NextFunction): void => {
+export const protect = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   let token;
 
   if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
@@ -19,6 +20,12 @@ export const protect = (req: AuthRequest, res: Response, next: NextFunction): vo
         userId: string;
         role: string;
       };
+
+      const user = await User.findById(decoded.userId);
+      if (user && user.isBlocked) {
+        res.status(403).json({ message: 'Your account has been blocked by an administrator.' });
+        return;
+      }
 
       req.user = decoded;
       next();
